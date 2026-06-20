@@ -1,0 +1,129 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #0f1115;
+  color: #f0f0f0;
+}
+
+.screen {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px 80px;
+}
+
+.screen.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+h1 { font-size: 1.6rem; margin-bottom: 4px; }
+h2 { font-size: 1.1rem; }
+.muted { color: #9aa0a6; }
+
+.card {
+  background: #1a1d23;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+input, textarea {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background: #0f1115;
+  color: #f0f0f0;
+  font-size: 1rem;
+}
+
+button {
+  background: #4f7cff;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.link {
+  background: none;
+  color: #9aa0a6;
+  text-decoration: underline;
+  padding: 4px;
+}
+
+.error { color: #ff6b6b; margin: 8px 0; }
+.badge {
+  font-size: 0.7rem;
+  background: #4f7cff;
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin-left: 6px;
+}
+
+.user-list { list-style: none; padding: 0; }
+.user-list li { padding: 4px 0; }
+
+.balance { font-size: 1.1rem; font-weight: 600; }
+
+.presentation-list { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+.presentation-row {
+  background: #1a1d23;
+  border-radius: 10px;
+  padding: 12px;
+}
+.presentation-name { font-weight: 600; margin-bottom: 6px; }
+.odds-bar {
+  background: #2a2e36;
+  border-radius: 6px;
+  height: 10px;
+  overflow: hidden;
+}
+.odds-fill { background: #4f7cff; height: 100%; transition: width 0.3s ease; }
+.odds-pct { font-size: 0.85rem; color: #9aa0a6; margin-top: 4px; }
+.bet-controls { display: flex; gap: 8px; margin-top: 8px; }
+.bet-controls input { margin: 0; }
+
+.vote-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: #1a1d23;
+  border: 2px solid transparent;
+  margin-bottom: 8px;
+  padding: 14px;
+}
+.vote-option.selected { border-color: #4f7cff; }
+
+table.leaderboard {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+table.leaderboard th, table.leaderboard td {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid #2a2e36;
+}
+.positive { color: #4ade80; }
+.negative { color: #ff6b6b; }
+
+.host-reset-bar {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 100;
+}
+.reset-btn {
+  background: #3a2020;
+  color: #ff8b8b;
+  border: 1px solid #5a2c2c;
+  font-size: 0.8rem;
+  padding: 6px 10px;
+}

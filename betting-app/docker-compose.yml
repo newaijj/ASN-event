@@ -1,0 +1,15 @@
+services:
+  betting-app:
+    build: .
+    image: presentation-betting-app:latest
+    ports:
+      - "80:3000"
+    environment:
+      # Liquidity parameter for the LMSR market maker. Smaller = odds move
+      # more dramatically per bet. ~50-150 is reasonable for 4-10
+      # presentations and 20 users with 100 coins each.
+      LIQUIDITY_B: "80"
+      # Whoever enters this token on the join screen gets host controls.
+      # Change this before running a real event.
+      HOST_TOKEN: "changeme"
+    restart: unless-stopped
