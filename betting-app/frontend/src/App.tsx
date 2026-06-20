@@ -7,6 +7,14 @@ import Betting from "./screens/Betting";
 import Voting from "./screens/Voting";
 import Leaderboard from "./screens/Leaderboard";
 
+const PHASE_LABELS: Record<string, string> = {
+  LOBBY: "Lobby",
+  BETTING_OPEN: "Betting open",
+  BETTING_LOCKED: "Betting locked",
+  VOTING_OPEN: "Voting",
+  RESOLVED: "Results",
+};
+
 export default function App() {
   const [connected, setConnected] = useState(socket.connected);
   const [state, setState] = useState<PublicState | null>(null);
@@ -76,7 +84,7 @@ export default function App() {
   if (!connected) {
     return (
       <div className="screen center">
-        <p>Connecting...</p>
+        <p className="muted">Connecting...</p>
       </div>
     );
   }
@@ -91,6 +99,8 @@ export default function App() {
       />
     );
   }
+
+  const me = state.users.find((u) => u.id === userId);
 
   let screen: React.ReactNode;
   switch (state.phase) {
@@ -113,14 +123,21 @@ export default function App() {
 
   return (
     <>
-      {isHost && (
-        <div className="host-reset-bar">
-          <button className="reset-btn" onClick={triggerReset}>
-            Reset room
-          </button>
+      <header className="topbar">
+        <div className="topbar-left">
+          <span className="topbar-title">Presentation Betting</span>
+          <span className="topbar-phase">{PHASE_LABELS[state.phase] ?? state.phase}</span>
         </div>
-      )}
-      {screen}
+        <div className="topbar-right">
+          {me && <span className="balance-pill">{me.balance.toFixed(1)} coins</span>}
+          {isHost && (
+            <button className="reset-btn" onClick={triggerReset}>
+              Reset room
+            </button>
+          )}
+        </div>
+      </header>
+      <main className="app-main">{screen}</main>
     </>
   );
 }

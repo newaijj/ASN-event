@@ -17,6 +17,11 @@ export default function Betting({
 
   const me = state.users.find((u) => u.id === userId);
   const locked = state.phase !== "BETTING_OPEN";
+  const myBalance = me?.balance ?? 0;
+
+  function setPreset(presentationId: string, coins: number) {
+    setAmounts((a) => ({ ...a, [presentationId]: String(coins) }));
+  }
 
   function placeBet(presentationId: string) {
     const raw = amounts[presentationId];
@@ -53,7 +58,6 @@ export default function Betting({
   return (
     <div className="screen">
       <h1>{locked ? "Betting is closed" : "Place your bets"}</h1>
-      <p className="balance">Your balance: {me ? me.balance.toFixed(1) : "..."} coins</p>
       <p className="muted">
         Winner-take-all: if a presentation finishes 1st, every coin you put on it pays back
         roughly 1 / current odds. Anything else pays back 0.
@@ -76,18 +80,42 @@ export default function Betting({
               )}
             </div>
             {!locked && (
-              <div className="bet-controls">
-                <input
-                  type="number"
-                  min={1}
-                  placeholder="coins"
-                  value={amounts[o.id] ?? ""}
-                  onChange={(e) =>
-                    setAmounts((a) => ({ ...a, [o.id]: e.target.value }))
-                  }
-                />
-                <button onClick={() => placeBet(o.id)}>Bet</button>
-              </div>
+              <>
+                <div className="bet-controls">
+                  <input
+                    type="number"
+                    min={1}
+                    inputMode="numeric"
+                    placeholder="coins"
+                    value={amounts[o.id] ?? ""}
+                    onChange={(e) =>
+                      setAmounts((a) => ({ ...a, [o.id]: e.target.value }))
+                    }
+                  />
+                  <button onClick={() => placeBet(o.id)}>Bet</button>
+                </div>
+                <div className="bet-presets">
+                  {[5, 10, 25].map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className="chip"
+                      disabled={myBalance < 1}
+                      onClick={() => setPreset(o.id, Math.min(p, Math.floor(myBalance)))}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className="chip"
+                    disabled={myBalance < 1}
+                    onClick={() => setPreset(o.id, Math.floor(myBalance))}
+                  >
+                    Max
+                  </button>
+                </div>
+              </>
             )}
           </div>
         ))}
@@ -98,10 +126,14 @@ export default function Betting({
       {isHost && (
         <div className="card">
           {state.phase === "BETTING_OPEN" && (
-            <button onClick={lockBetting}>Lock betting</button>
+            <button onClick={lockBetting} style={{ width: "100%" }}>
+              Lock betting
+            </button>
           )}
           {state.phase === "BETTING_LOCKED" && (
-            <button onClick={openVoting}>Open voting</button>
+            <button onClick={openVoting} style={{ width: "100%" }}>
+              Open voting
+            </button>
           )}
         </div>
       )}

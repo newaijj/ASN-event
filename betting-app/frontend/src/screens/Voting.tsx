@@ -44,7 +44,8 @@ export default function Voting({
             disabled={me?.hasVoted}
             onClick={() => vote(p.id)}
           >
-            {p.name}
+            <span>{p.name}</span>
+            {myVote === p.id && <span className="vote-check">✓</span>}
           </button>
         ))}
       </div>
@@ -54,7 +55,9 @@ export default function Voting({
 
       {isHost && (
         <div className="card">
-          <button onClick={resolve}>Close voting & resolve</button>
+          <button onClick={resolve} style={{ width: "100%" }}>
+            Close voting & resolve
+          </button>
         </div>
       )}
     </div>

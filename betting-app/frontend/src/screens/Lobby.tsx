@@ -37,10 +37,10 @@ export default function Lobby({
     <div className="screen">
       <h1>Lobby</h1>
       <p className="muted">{state.users.length} joined</p>
-      <ul className="user-list">
+      <ul className="user-grid">
         {state.users.map((u) => (
           <li key={u.id}>
-            {u.nickname} {u.isHost && <span className="badge">host</span>}
+            <span>{u.nickname}</span> {u.isHost && <span className="badge">host</span>}
           </li>
         ))}
       </ul>
@@ -57,7 +57,9 @@ export default function Lobby({
                 onChange={(e) => setNamesText(e.target.value)}
                 placeholder={"Alice's Talk\nBob's Talk\nCarol's Talk"}
               />
-              <button onClick={setPresentations}>Save presentations</button>
+              <button onClick={setPresentations} style={{ width: "100%" }}>
+                Save presentations
+              </button>
             </>
           ) : (
             <>
@@ -67,7 +69,9 @@ export default function Lobby({
                   <li key={p.id}>{p.name}</li>
                 ))}
               </ol>
-              <button onClick={openBetting}>Open betting</button>
+              <button onClick={openBetting} style={{ width: "100%" }}>
+                Open betting
+              </button>
             </>
           )}
           {error && <div className="error">{error}</div>}
