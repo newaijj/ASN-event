@@ -54,6 +54,10 @@ export default function Betting({
     <div className="screen">
       <h1>{locked ? "Betting is closed" : "Place your bets"}</h1>
       <p className="balance">Your balance: {me ? me.balance.toFixed(1) : "..."} coins</p>
+      <p className="muted">
+        Winner-take-all: if a presentation finishes 1st, every coin you put on it pays back
+        roughly 1 / current odds. Anything else pays back 0.
+      </p>
 
       <div className="presentation-list">
         {sortedOdds.map((o) => (
@@ -65,7 +69,12 @@ export default function Betting({
             <div className="odds-bar">
               <div className="odds-fill" style={{ width: `${o.price * 100}%` }} />
             </div>
-            <div className="odds-pct">{(o.price * 100).toFixed(1)}%</div>
+            <div className="odds-pct">
+              {(o.price * 100).toFixed(1)}%
+              {o.price > 0 && (
+                <span className="payout-hint"> — ~{(1 / o.price).toFixed(2)}x if this wins</span>
+              )}
+            </div>
             {!locked && (
               <div className="bet-controls">
                 <input

@@ -20,7 +20,7 @@ describe("LMSR pricing", () => {
   });
 });
 
-describe("settlement normalization conserves currency exactly", () => {
+describe("winner-take-all settlement conserves currency and stays solvent", () => {
   function randomScenario(seedNum: number) {
     let s = seedNum;
     const rand = () => {
@@ -57,33 +57,44 @@ describe("settlement normalization conserves currency exactly", () => {
     const totalBeforeSettlement =
       balances.reduce((a, c) => a + c, 0) + houseReserve;
 
-    // random placement
-    const order = [...Array(n).keys()];
-    for (let i = order.length - 1; i > 0; i--) {
-      const j = Math.floor(rand() * (i + 1));
-      [order[i], order[j]] = [order[j], order[i]];
-    }
+    // random winner - only rank 1 (one outcome) pays, weight 1.0
+    const winner = Math.floor(rand() * n);
     const rankWeight = new Array(n).fill(0);
-    rankWeight[order[0]] = 1.0;
-    if (n > 1) rankWeight[order[1]] = 0.66;
-    if (n > 2) rankWeight[order[2]] = 0.33;
+    rankWeight[winner] = 1.0;
 
     const totalPool = houseReserve;
-    const payouts = market.settle(shares, rankWeight, totalPool);
+    const payouts = market.settle(shares, rankWeight);
+    const totalPaid = payouts.reduce((a, c) => a + c, 0);
+    const houseReserveAfter = totalPool - totalPaid;
 
     const finalBalances = balances.map((bal, idx) => bal + payouts[idx]);
-    const totalAfter = finalBalances.reduce((a, c) => a + c, 0);
+    const totalAfter = finalBalances.reduce((a, c) => a + c, 0) + houseReserveAfter;
 
-    return { initialTotal, totalBeforeSettlement, totalAfter, totalPool, payouts };
+    return { initialTotal, totalBeforeSettlement, totalAfter, totalPool, totalPaid, payouts };
   }
 
-  it("conserves total currency across many randomized scenarios", () => {
+  it("conserves total currency (balances + house reserve) across many randomized scenarios", () => {
     for (let seed = 0; seed < 50; seed++) {
       const r = randomScenario(seed + 1);
       expect(r.totalBeforeSettlement).toBeCloseTo(r.initialTotal, 6);
       expect(r.totalAfter).toBeCloseTo(r.initialTotal, 6);
       expect(r.payouts.every((p) => p >= -1e-9)).toBe(true); // no negative payouts
+      // Solvency: the house never pays out more than the pool it collected.
+      expect(r.totalPaid).toBeLessThanOrEqual(r.totalPool + 1e-9);
     }
+  });
+
+  it("a single user's payout is exactly their winning shares (1 coin each), no rescaling", () => {
+    // 3 outcomes, only outcome 0 wins. Two users hold shares in outcome 0,
+    // one in outcome 1 (loser).
+    const shares = [
+      [10, 0, 0], // wins 10 coins
+      [4, 0, 0], // wins 4 coins
+      [0, 7, 0], // wins 0 - bet on a non-winner
+    ];
+    const rankWeight = [1.0, 0, 0];
+    const payouts = market.settle(shares, rankWeight);
+    expect(payouts).toEqual([10, 4, 0]);
   });
 });
 
@@ -125,10 +136,15 @@ describe("Session integration", () => {
 
     session.resolve();
 
+    // Total currency (user balances + house reserve) is exactly conserved.
     expect(session.totalCurrency()).toBeCloseTo(initialTotal, 6);
     expect(session.leaderboard.length).toBe(20);
+    // Winner-take-all only pays out to bettors on the winning presentation,
+    // so the leaderboard sum alone is generally LESS than initialTotal - the
+    // unclaimed remainder sits in the house reserve, not redistributed.
     const totalFinal = session.leaderboard.reduce((a, c) => a + c.finalBalance, 0);
-    expect(totalFinal).toBeCloseTo(initialTotal, 6);
+    expect(totalFinal).toBeLessThanOrEqual(initialTotal + 1e-6);
+    expect(totalFinal + session.houseReserve).toBeCloseTo(initialTotal, 6);
   });
 
   it("rejects a bet larger than balance", () => {

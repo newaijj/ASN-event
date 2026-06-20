@@ -11,7 +11,9 @@ import type {
 
 const STARTING_BALANCE = 100;
 const MIN_BET = 1;
-const RANK_WEIGHTS = [1.0, 0.66, 0.33]; // 1st, 2nd, 3rd
+// Winner-take-all: a share is worth 1 coin if its presentation finishes
+// 1st, and 0 coins for every other rank. (Index 0 = 1st place.)
+const RANK_WEIGHTS = [1.0];
 
 interface InternalUser {
   id: string;
@@ -163,14 +165,19 @@ export class Session {
 
     const payouts = market.settle(
       userList.map((u) => u.shares),
-      rankWeight,
-      totalPool
+      rankWeight
     );
 
     userList.forEach((u, idx) => {
       u.balance += payouts[idx];
     });
-    this.houseReserve = 0;
+    // Winner-take-all payouts are deterministic, not rescaled - they won't
+    // generally add up to the full pool (e.g. if few people bet on the
+    // winner). Whatever's left over stays in the house reserve rather than
+    // being force-redistributed; total system currency (balances + house
+    // reserve) is still exactly conserved.
+    const totalPaid = payouts.reduce((a, c) => a + c, 0);
+    this.houseReserve = totalPool - totalPaid;
 
     this.leaderboard = userList
       .map((u) => ({

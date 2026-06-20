@@ -1,10 +1,19 @@
 /**
- * LMSR (Logarithmic Market Scoring Rule) market maker, plus a settlement
- * normalization step that guarantees exact conservation of total currency
- * even though payouts are graduated (1st = 100%, 2nd = 66%, 3rd = 33%)
- * rather than a single binary winner-takes-all outcome.
+ * LMSR (Logarithmic Market Scoring Rule) market maker.
  *
- * See /docs in the project root (or the original plan doc) for the derivation.
+ * Settlement is winner-take-all: each share is worth exactly 1 coin if its
+ * presentation finishes 1st, and 0 coins otherwise. This is the standard,
+ * deterministic prediction-market mechanic - the payout for every share is
+ * known the instant it's bought, with no settlement-time rescaling.
+ *
+ * It's solvent by a standard LMSR bound: the cost function satisfies
+ * C(q) >= q_i for every outcome i, so the total owed to holders of the
+ * winning outcome's shares can never exceed C(q_final) - and C(q_final)
+ * equals exactly the total pool (house reserve seed + everything anyone
+ * spent buying shares). Any pool left over after paying winners (because
+ * nobody bet on the winner, or because the bound isn't tight) simply stays
+ * in the house reserve - total system currency (user balances + house
+ * reserve) is still conserved, it's just not all claimed every round.
  */
 
 /** Sum of exp(q_i / b) across all outcomes. */
@@ -58,31 +67,17 @@ export function buyShares(q: number[], b: number, i: number, coins: number): Buy
 
 /**
  * Settle the market. `userShares[u][i]` = shares user u holds in outcome i.
- * `rankWeight[i]` = payout weight for outcome i (1.0 / 0.66 / 0.33 / 0 typically).
- * `totalPool` = every coin currently not in a user's wallet (house reserve +
- * everything everyone spent buying shares) - i.e. the entire amount available
- * to redistribute.
+ * `rankWeight[i]` = payout weight for outcome i - for winner-take-all this is
+ * 1.0 for whichever outcome finished 1st and 0 for every other outcome.
  *
- * Returns a payout per user that is guaranteed to sum to exactly `totalPool`,
- * by normalizing the raw LMSR-implied payouts. This is what makes the total
- * currency invariant hold regardless of betting pattern or outcome.
+ * Each user's payout is simply the value of the shares they hold, deterministic
+ * and known at bet time (a share bought at any point is worth exactly
+ * `rankWeight[i]` coins once outcome i's final rank is known). No rescaling
+ * or normalization step is needed or performed - see the file header for why
+ * this stays solvent.
  */
-export function settle(
-  userShares: number[][],
-  rankWeight: number[],
-  totalPool: number
-): number[] {
-  const raw = userShares.map((shares) =>
+export function settle(userShares: number[][], rankWeight: number[]): number[] {
+  return userShares.map((shares) =>
     shares.reduce((acc, s, i) => acc + s * (rankWeight[i] ?? 0), 0)
   );
-  const totalRaw = raw.reduce((a, c) => a + c, 0);
-
-  // If nobody holds any shares in a paying outcome (e.g. nobody bet on the
-  // top 3), there's nothing to redistribute - the pool simply stays
-  // unclaimed in the house reserve. Total system currency is still
-  // conserved; it's just not handed out. Returning all zeros is correct.
-  if (totalRaw === 0) return raw.map(() => 0);
-
-  const scale = totalPool / totalRaw;
-  return raw.map((r) => r * scale);
 }

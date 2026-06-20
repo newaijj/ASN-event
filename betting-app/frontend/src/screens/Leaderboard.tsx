@@ -16,9 +16,8 @@ export default function Leaderboard({ state }: { state: PublicState }) {
           {results.map((r) => (
             <li key={r.presentationId}>
               {presentationName(r.presentationId)} — {r.votes} votes
-              {r.rank === 1 && " (pays 100%)"}
-              {r.rank === 2 && " (pays 66%)"}
-              {r.rank === 3 && " (pays 33%)"}
+              {r.rank === 1 && " (winner - shares pay 1 coin each)"}
+              {r.rank !== 1 && " (shares pay 0)"}
             </li>
           ))}
         </ol>
