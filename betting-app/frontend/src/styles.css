@@ -310,6 +310,105 @@ button.reset-btn {
   font-weight: 600;
 }
 
+.bet-quote {
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 11px;
+  margin-top: 8px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.bet-quote strong {
+  color: var(--text);
+}
+
+.price-chart-wrap {
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px 16px 0;
+}
+.price-chart-card {
+  margin-top: 0;
+}
+.price-chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin-top: 4px;
+}
+.price-chart-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.price-chart-axis-label {
+  fill: var(--text-muted);
+  font-size: 9px;
+}
+.price-chart-waiting {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+}
+.price-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+.price-chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.price-chart-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.bet-history-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bet-history-row {
+  background: var(--bg-elev-2);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.bet-history-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.bet-history-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bet-history-time {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.74rem;
+  flex-shrink: 0;
+}
+.bet-history-detail {
+  font-size: 0.82rem;
+  margin-top: 3px;
+}
+
 .bet-controls {
   display: flex;
   flex-wrap: wrap;

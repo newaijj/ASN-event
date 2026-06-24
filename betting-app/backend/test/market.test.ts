@@ -154,4 +154,82 @@ describe("Session integration", () => {
     session.openBetting();
     expect(() => session.placeBet(u.id, session.presentations[0].id, 1000)).toThrow();
   });
+
+  it("records accurate bet history per user, isolated from other users", () => {
+    const session = new Session({ liquidityB: 80, hostToken: "abc" });
+    const alice = session.join("Alice", false);
+    const bob = session.join("Bob", false);
+    session.setPresentations(["A", "B", "C"]);
+    session.openBetting();
+
+    const presA = session.presentations[0].id;
+    const presB = session.presentations[1].id;
+
+    const rec1 = session.placeBet(alice.id, presA, 10);
+    const rec2 = session.placeBet(alice.id, presB, 5);
+    session.placeBet(bob.id, presA, 7);
+
+    const aliceHistory = session.getBetHistory(alice.id);
+    expect(aliceHistory.length).toBe(2);
+    expect(aliceHistory).toContainEqual(rec1);
+    expect(aliceHistory).toContainEqual(rec2);
+
+    // coins/sharesReceived/avgPrice are internally consistent for each record.
+    for (const rec of aliceHistory) {
+      expect(rec.coins).toBeGreaterThan(0);
+      expect(rec.sharesReceived).toBeGreaterThan(0);
+      expect(rec.avgPrice).toBeCloseTo(rec.coins / rec.sharesReceived, 9);
+      expect([presA, presB]).toContain(rec.presentationId);
+    }
+
+    // Bob's history is separate and unaffected by Alice's bets.
+    const bobHistory = session.getBetHistory(bob.id);
+    expect(bobHistory.length).toBe(1);
+    expect(bobHistory[0].presentationId).toBe(presA);
+    expect(bobHistory[0].coins).toBe(7);
+
+    // Unknown user has an empty history rather than throwing.
+    expect(session.getBetHistory("nonexistent-id")).toEqual([]);
+  });
+
+  it("tracks priceHistory over time and resets it on room reset", () => {
+    const session = new Session({ liquidityB: 80, hostToken: "abc" });
+    const alice = session.join("Alice", false);
+
+    session.setPresentations(["A", "B", "C"]);
+    // Baseline point recorded immediately, with equal odds (no bets yet).
+    expect(session.priceHistory.length).toBe(1);
+    expect(session.priceHistory[0].prices.length).toBe(3);
+    for (const p of session.priceHistory[0].prices) {
+      expect(p).toBeCloseTo(1 / 3, 9);
+    }
+
+    session.openBetting();
+    const presA = session.presentations[0].id;
+    const presB = session.presentations[1].id;
+
+    session.placeBet(alice.id, presA, 20);
+    expect(session.priceHistory.length).toBe(2);
+
+    session.placeBet(alice.id, presB, 5);
+    expect(session.priceHistory.length).toBe(3);
+
+    // Each recorded point's prices line up with what odds()/prices() report
+    // at that moment, and is non-decreasing in timestamp order.
+    const last = session.priceHistory[session.priceHistory.length - 1];
+    const liveOdds = session.odds();
+    last.prices.forEach((p, i) => {
+      expect(p).toBeCloseTo(liveOdds[i].price, 9);
+    });
+    for (let i = 1; i < session.priceHistory.length; i++) {
+      expect(session.priceHistory[i].t).toBeGreaterThanOrEqual(session.priceHistory[i - 1].t);
+    }
+
+    // publicState() exposes the same history to clients.
+    expect(session.publicState().priceHistory).toBe(session.priceHistory);
+
+    // A host reset wipes it, ready for a fresh round.
+    session.reset();
+    expect(session.priceHistory).toEqual([]);
+  });
 });

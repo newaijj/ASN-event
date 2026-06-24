@@ -7,10 +7,15 @@ import type {
   PublicUser,
   OddsEntry,
   LeaderboardEntry,
+  BetRecord,
+  PricePoint,
 } from "./types.js";
 
 const STARTING_BALANCE = 100;
 const MIN_BET = 1;
+// Defensive cap so a very long-running room can't grow this array forever -
+// 5000 points is far more than any single event needs (one point per bet).
+const MAX_PRICE_HISTORY = 5000;
 // Winner-take-all: a share is worth 1 coin if its presentation finishes
 // 1st, and 0 coins for every other rank. (Index 0 = 1st place.)
 const RANK_WEIGHTS = [1.0];
@@ -24,6 +29,7 @@ interface InternalUser {
   hasVoted: boolean;
   voteFor: string | null;
   isHost: boolean;
+  betHistory: BetRecord[];
 }
 
 export class Session {
@@ -32,6 +38,10 @@ export class Session {
   presentations: Presentation[] = [];
   q: number[] = []; // LMSR outstanding shares per presentation
   houseReserve = 0;
+  // Live odds over time for the current round - one point per presentation
+  // set + one per bet. Stays in PublicState (so it persists on every client
+  // across BETTING_OPEN -> VOTING_OPEN -> RESOLVED) until the room resets.
+  priceHistory: PricePoint[] = [];
   users = new Map<string, InternalUser>();
   hostToken: string;
   private startBalances = new Map<string, number>();
@@ -56,6 +66,7 @@ export class Session {
       hasVoted: false,
       voteFor: null,
       isHost: claimHost,
+      betHistory: [],
     };
     this.users.set(id, user);
     this.startBalances.set(id, STARTING_BALANCE);
@@ -76,6 +87,19 @@ export class Session {
     this.houseReserve = market.initialReserve(this.presentations.length, this.liquidityB);
     for (const u of this.users.values()) {
       u.shares = this.presentations.map(() => 0);
+    }
+    this.priceHistory = [];
+    this.recordPricePoint(); // baseline point: equal odds before any bets
+  }
+
+  /** Append the current live odds as a timestamped point in priceHistory. */
+  private recordPricePoint() {
+    this.priceHistory.push({
+      t: Date.now(),
+      prices: market.prices(this.q, this.liquidityB),
+    });
+    if (this.priceHistory.length > MAX_PRICE_HISTORY) {
+      this.priceHistory.splice(0, this.priceHistory.length - MAX_PRICE_HISTORY);
     }
   }
 
@@ -99,7 +123,7 @@ export class Session {
 
   // ---- betting ----
 
-  placeBet(userId: string, presentationId: string, coins: number) {
+  placeBet(userId: string, presentationId: string, coins: number): BetRecord {
     if (this.phase !== "BETTING_OPEN") throw new Error("betting is not open");
     const user = this.users.get(userId);
     if (!user) throw new Error("unknown user");
@@ -114,6 +138,25 @@ export class Session {
     user.balance -= coins;
     user.shares[i] += sharesReceived;
     this.houseReserve += coins;
+    this.recordPricePoint();
+
+    const record: BetRecord = {
+      id: randomUUID(),
+      presentationId,
+      coins,
+      sharesReceived,
+      avgPrice: coins / sharesReceived,
+      placedAt: Date.now(),
+    };
+    user.betHistory.push(record);
+    return record;
+  }
+
+  /** A user's own bet history, oldest first. Not broadcast publicly - the
+   * caller (server.ts) is expected to send this only to that user's own
+   * socket, not via the shared state broadcast. */
+  getBetHistory(userId: string): BetRecord[] {
+    return this.users.get(userId)?.betHistory ?? [];
   }
 
   // ---- voting ----
@@ -211,13 +254,20 @@ export class Session {
     this.startBalances.clear();
     this.results = [];
     this.leaderboard = [];
+    this.priceHistory = [];
   }
 
   // ---- snapshot for broadcasting ----
 
   odds(): OddsEntry[] {
-    const p = market.prices(this.q.length ? this.q : this.presentations.map(() => 0), this.liquidityB);
-    return this.presentations.map((pres, i) => ({ id: pres.id, name: pres.name, price: p[i] ?? 0 }));
+    const qOrZero = this.q.length ? this.q : this.presentations.map(() => 0);
+    const p = market.prices(qOrZero, this.liquidityB);
+    return this.presentations.map((pres, i) => ({
+      id: pres.id,
+      name: pres.name,
+      price: p[i] ?? 0,
+      q: qOrZero[i] ?? 0,
+    }));
   }
 
   publicState(forUserId?: string): PublicState {
@@ -226,6 +276,8 @@ export class Session {
       phase: this.phase,
       presentations: this.presentations,
       odds: this.odds(),
+      liquidityB: this.liquidityB,
+      priceHistory: this.priceHistory,
       users: [...this.users.values()].map((u) => this.toPublicUser(u)),
     };
     if (includeVotes) {

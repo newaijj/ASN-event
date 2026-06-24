@@ -1,6 +1,13 @@
-import type { PublicState } from "../types";
+import type { BetRecord, PublicState } from "../types";
+import BetHistory from "../components/BetHistory";
 
-export default function Leaderboard({ state }: { state: PublicState }) {
+export default function Leaderboard({
+  state,
+  betHistory,
+}: {
+  state: PublicState;
+  betHistory: BetRecord[];
+}) {
   const leaderboard = state.leaderboard ?? [];
   const results = state.results ?? [];
   const presentationName = (id: string) =>
@@ -49,6 +56,11 @@ export default function Leaderboard({ state }: { state: PublicState }) {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="card">
+        <h2>Your bets</h2>
+        <BetHistory bets={betHistory} presentations={state.presentations} />
       </div>
     </div>
   );

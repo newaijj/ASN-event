@@ -43,6 +43,7 @@ io.on("connection", (socket) => {
       session.attachSocket(user.id, socket.id);
       socket.data.userId = user.id;
       ack?.({ ok: true, userId: user.id, isHost: claimHost });
+      socket.emit("bet_history", session.getBetHistory(user.id));
       broadcastState();
     } catch (err: any) {
       ack?.({ ok: false, error: err.message });
@@ -59,6 +60,7 @@ io.on("connection", (socket) => {
     socket.data.userId = u.id;
     ack?.({ ok: true, userId: u.id, isHost: u.isHost });
     socket.emit("state", session.publicState());
+    socket.emit("bet_history", session.getBetHistory(u.id));
   });
 
   socket.on("place_bet", (payload: { presentationId: string; coins: number }, ack) => {
@@ -68,6 +70,7 @@ io.on("connection", (socket) => {
       session.placeBet(userId, payload.presentationId, Number(payload.coins));
       ack?.({ ok: true });
       broadcastState();
+      socket.emit("bet_history", session.getBetHistory(userId));
     } catch (err: any) {
       ack?.({ ok: false, error: err.message });
     }

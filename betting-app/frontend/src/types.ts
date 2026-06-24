@@ -21,7 +21,9 @@ export interface PublicUser {
 export interface OddsEntry {
   id: string;
   name: string;
-  price: number;
+  price: number; // 0-1 implied probability - instantaneous/marginal price only
+  q: number; // outstanding LMSR shares for this outcome - used with
+  // liquidityB to compute the exact shares/odds a specific bet size gets
 }
 
 export interface LeaderboardEntry {
@@ -32,11 +34,27 @@ export interface LeaderboardEntry {
   netGain: number;
 }
 
+export interface BetRecord {
+  id: string;
+  presentationId: string;
+  coins: number;
+  sharesReceived: number;
+  avgPrice: number;
+  placedAt: number;
+}
+
+export interface PricePoint {
+  t: number;
+  prices: number[]; // aligned by index to PublicState.presentations
+}
+
 export interface PublicState {
   phase: Phase;
   presentations: Presentation[];
   odds: OddsEntry[];
+  liquidityB: number;
   users: PublicUser[];
+  priceHistory: PricePoint[];
   voteCounts?: Record<string, number>;
   leaderboard?: LeaderboardEntry[];
   results?: { presentationId: string; rank: number; votes: number }[];
